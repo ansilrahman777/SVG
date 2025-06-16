@@ -1,7 +1,7 @@
 from rest_framework import serializers
 from accounts.models import User
 from django.utils.crypto import get_random_string
-from .models import UserPermission, PAGE_CHOICES
+from .models import UserPermission, PAGE_CHOICES, Comment, CommentHistory
 from django.contrib.auth import get_user_model
 
 class AdminLoginSerializer(serializers.Serializer):
@@ -51,3 +51,16 @@ class AssignPermissionSerializer(serializers.Serializer):
         if not User.objects.filter(id=value, is_superadmin=False).exists():
             raise serializers.ValidationError("User not found or is a superadmin.")
         return value
+
+
+class CommentSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Comment
+        fields = ['id', 'user', 'page', 'text', 'created_at', 'updated_at']
+        read_only_fields = ['user', 'created_at', 'updated_at']
+
+
+class CommentHistorySerializer(serializers.ModelSerializer):
+    class Meta:
+        model = CommentHistory
+        fields = '__all__'

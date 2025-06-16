@@ -45,11 +45,12 @@ class Comment(models.Model):
 
 
 class CommentHistory(models.Model):
-    comment = models.ForeignKey(Comment, on_delete=models.CASCADE, related_name="histories")
+    comment = models.ForeignKey(Comment, on_delete=models.SET_NULL, null=True, blank=True, related_name="histories")
     modified_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True)
     old_text = models.TextField()
     new_text = models.TextField()
     modified_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
-        return f"History for Comment {self.comment.id} by {self.modified_by.email if self.modified_by else 'Unknown'}"
+        return f"History for Comment {self.comment.id if self.comment else 'Deleted'} by {self.modified_by.email if self.modified_by else 'Unknown'}"
+
