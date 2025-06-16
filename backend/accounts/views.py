@@ -248,4 +248,5 @@ class UserCommentDetailView(APIView):
         )
 
         comment.delete()
-        return Response({"detail": "Comment deleted successfully."}, status=status.HTTP_204_NO_CONTENT)
+
+        return Response({"detail": "Comment deleted successfully."}, status=status.HTTP_200_OK)
