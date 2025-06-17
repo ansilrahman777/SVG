@@ -175,7 +175,6 @@ class UserPageCommentsView(APIView):
         if permission.can_view:
             comments = Comment.objects.filter(page=page)
         else:
-            # User can only see their own comments if no view permission
             comments = Comment.objects.filter(page=page, user=request.user)
 
         serializer = CommentSerializer(comments, many=True)
@@ -191,10 +190,21 @@ class UserPageCommentsView(APIView):
 
         serializer = CommentSerializer(data=request.data)
         if serializer.is_valid():
-            serializer.save(user=request.user, page=page)
-            return Response(serializer.data, status=status.HTTP_201_CREATED)
+            comment = serializer.save(user=request.user, page=page)
+
+            # 🔍 Log CommentHistory: Added
+            CommentHistory.objects.create(
+                comment=comment,
+                modified_by=request.user,
+                action='added',
+                new_text=comment.text,
+                details=f"Comment added on page: {page}"
+            )
+
+            return Response(CommentSerializer(comment).data, status=status.HTTP_201_CREATED)
 
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
 
 
 # 📌 API: Edit/Delete a specific comment (if user has permission and is owner)
@@ -206,13 +216,14 @@ class UserCommentDetailView(APIView):
 
     def put(self, request, pk):
         comment = self.get_object(pk)
-
         permission = get_user_permission(request.user, comment.page)
+
         if not permission or not permission.can_edit:
             return Response({"detail": "No edit permission on this page."}, status=status.HTTP_403_FORBIDDEN)
 
         old_text = comment.text
-        serializer = CommentSerializer(comment, data=request.data, partial=True, context={'request': request})
+        serializer = CommentSerializer(comment, data=request.data, partial=True)
+
         if serializer.is_valid():
             serializer.save()
 
@@ -220,8 +231,10 @@ class UserCommentDetailView(APIView):
                 CommentHistory.objects.create(
                     comment=comment,
                     modified_by=request.user,
+                    action='edited',
                     old_text=old_text,
-                    new_text=request.data['text']
+                    new_text=request.data['text'],
+                    details=f"Comment edited on page: {comment.page}"
                 )
 
             return Response(serializer.data)
@@ -230,23 +243,29 @@ class UserCommentDetailView(APIView):
 
     def delete(self, request, pk):
         comment = self.get_object(pk)
-        
         permission = get_user_permission(request.user, comment.page)
+
         if not permission or not permission.can_delete:
             return Response({"detail": "No delete permission on this page."}, status=status.HTTP_403_FORBIDDEN)
 
-        # Update comment text before deleting to preserve history
         comment_text = comment.text
-        comment.text = "[Deleted by user]"
+
+        user_email = request.user.email if request.user and request.user.email else "Unknown User"
+        deleted_text = f"[Deleted by {user_email}]"
+
+        comment.text = deleted_text
         comment.save()
 
         CommentHistory.objects.create(
             comment=comment,
             modified_by=request.user,
+            action='deleted',
             old_text=comment_text,
-            new_text="[Deleted by user]"
+            new_text=deleted_text,
+            details=f"Comment deleted by {user_email} on page: {comment.page}"
         )
 
         comment.delete()
 
-        return Response({"detail": "Comment deleted successfully."}, status=status.HTTP_200_OK)
+        return Response({"detail": f"Comment deleted successfully by {user_email}."}, status=status.HTTP_200_OK)
+

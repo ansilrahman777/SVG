@@ -1,6 +1,18 @@
 import React, { useEffect, useState } from "react";
-import API from "../../api/axios";
 import { useNavigate } from "react-router-dom";
+import API from "../../api/userAPI";
+import PageCard from "../../components/PageCard"; // Adjust the path as needed
+import UserHeader from "../../components/user/Header"; // Optional: reusable header
+import { toast } from "react-toastify";
+
+const bgColors = [
+  "bg-orange-500",
+  "bg-teal-500",
+  "bg-purple-500",
+  "bg-blue-500",
+  "bg-pink-500",
+  "bg-indigo-500",
+];
 
 const UserDashboard = () => {
   const [pages, setPages] = useState([]);
@@ -11,17 +23,14 @@ const UserDashboard = () => {
       const res = await API.get("accounts/my-pages/");
       setPages(res.data);
     } catch (err) {
-      alert("Failed to fetch pages.");
+      console.error("Failed to fetch pages", err);
+      toast.error("Failed to fetch pages.", { autoClose: 2000 });
+      
     }
   };
 
-  const handleLogout = () => {
-    localStorage.clear();
-    navigate("/user/login");
-  };
-
-  const handlePageClick = (page_key) => {
-    navigate(`/user/page/${page_key}`);
+  const handlePageClick = (pageKey) => {
+    navigate(`/user/page/${pageKey}`);
   };
 
   useEffect(() => {
@@ -29,41 +38,30 @@ const UserDashboard = () => {
   }, []);
 
   return (
-    <div className="p-6">
-      <header className="flex justify-between items-center bg-blue-600 p-4 text-white">
-        <h1 className="text-xl font-bold">User Dashboard</h1>
-        <button onClick={handleLogout} className="bg-red-500 px-3 py-1 rounded">
-          Logout
-        </button>
-      </header>
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50">
+      {/* Reusable header */}
+      <UserHeader />
 
-      <main className="p-6">
-        <h2 className="text-2xl font-semibold mb-4">Accessible Pages</h2>
+      <main className="flex-grow p-6 max-w-7xl mx-auto animate-fadeIn">
+        <h1 className="text-3xl font-bold text-gray-800 mb-6">Your Pages</h1>
 
-        <div className="grid md:grid-cols-2 gap-4">
-          {pages.map((page, index) => (
-            <div
-              key={page.page_key || index}
-              onClick={() => handlePageClick(page.page_key)}
-              className="p-4 border rounded shadow cursor-pointer hover:bg-blue-50 transition"
-            >
-              <h3 className="text-lg font-bold mb-2">{page.page_label}</h3>
+        <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+          {pages.map((page, index) => {
+            const color = bgColors[index % bgColors.length];
+            const label = page.page_label;
+            const count = 
+              [page.can_view, page.can_create, page.can_edit, page.can_delete].filter(Boolean)
+                .length || 0;
 
-              <div className="text-sm text-gray-700">
-                Access:
-                {page.can_view && <span className="ml-2">View</span>}
-                {page.can_create && <span className="ml-2">Create</span>}
-                {page.can_edit && <span className="ml-2">Edit</span>}
-                {page.can_delete && <span className="ml-2">Delete</span>}
-                {!page.can_view &&
-                  !page.can_create &&
-                  !page.can_edit &&
-                  !page.can_delete && (
-                    <span className="ml-2 text-gray-400">No Access</span>
-                  )}
-              </div>
-            </div>
-          ))}
+            return (
+              <PageCard
+                key={label}
+                pageLabel={label}
+                color={color}
+                onClick={() => handlePageClick(page.page_key)}
+              />
+            );
+          })}
         </div>
       </main>
     </div>

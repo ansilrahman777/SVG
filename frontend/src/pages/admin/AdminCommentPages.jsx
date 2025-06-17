@@ -3,8 +3,9 @@ import { useNavigate } from "react-router-dom";
 import API from "../../api/axios";
 import AdminNavbar from "../../components/admin/AdminNavbar";
 import AdminSidebar from "../../components/admin/AdminSidebar";
+import PageCard from "../../components/PageCard"; // ✅ Import reusable PageCard
+import { toast } from "react-toastify";
 
-// Color palette to rotate between cards
 const bgColors = [
   "bg-orange-500",
   "bg-teal-500",
@@ -29,11 +30,17 @@ const AdminCommentPages = () => {
       setPageComments(res.data);
     } catch (err) {
       console.error("Failed to fetch comments", err);
-      alert("Failed to load comments.");
+      toast.error("Failed to load comments.", { autoClose: 2000 });
     }
   };
 
   const toggleSidebar = () => setSidebarOpen((prev) => !prev);
+
+  const handleCardClick = (pageLabel, pageCode) => {
+    navigate(`/adminpanel/comments/${encodeURIComponent(pageLabel)}`, {
+      state: { pageLabel, pageCode },
+    });
+  };
 
   return (
     <div className="flex h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 overflow-hidden">
@@ -47,65 +54,17 @@ const AdminCommentPages = () => {
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
             {Object.entries(pageComments).map(([pageLabel, comments], index) => {
               const color = bgColors[index % bgColors.length];
-
               return (
-                <div
+                <PageCard
                   key={pageLabel}
-                  className={`relative overflow-hidden ${color} rounded-lg shadow-lg transform transition-transform duration-300 hover:-translate-y-2 cursor-pointer h-[260px] flex flex-col justify-between`}
-                  onClick={() =>
-                    navigate(`/adminpanel/comments/${encodeURIComponent(pageLabel)}`, {
-                      state: { pageLabel, pageCode: comments[0]?.page || "" },
-                    })
-                  }
-                >
-                  {/* Background SVGs */}
-                  <svg
-                    className="absolute bottom-0 left-0 mb-8"
-                    viewBox="0 0 375 283"
-                    fill="none"
-                    style={{ transform: "scale(1.5)", opacity: 0.1 }}
-                  >
-                    <rect
-                      x="159.52"
-                      y="175"
-                      width="152"
-                      height="152"
-                      rx="8"
-                      transform="rotate(-45 159.52 175)"
-                      fill="white"
-                    />
-                    <rect
-                      y="107.48"
-                      width="152"
-                      height="152"
-                      rx="8"
-                      transform="rotate(-45 0 107.48)"
-                      fill="white"
-                    />
-                  </svg>
-
-                  {/* Title */}
-                  <div className="relative pt-10 px-6 text-center">
-                    <h3 className="text-white font-semibold text-lg leading-tight truncate">
-                      {pageLabel}
-                    </h3>
-                  </div>
-
-                  {/* Comment Count */}
-                  <div className="relative text-white px-6 pb-6">
-                    <p className="text-sm opacity-75 mb-2 text-center">Total Comments</p>
-                    <div className="flex justify-center">
-                      <span className="bg-white text-gray-800 rounded-full text-sm font-semibold px-4 py-1">
-                        {comments.length}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-
+                  pageLabel={pageLabel}
+                  count={comments.length}
+                  color={color}
+                  onClick={() => handleCardClick(pageLabel, comments[0]?.page || "")}
+                />
               );
             })}
           </div>
-
         </div>
       </div>
     </div>

@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import PublicAPI from "../../api/publicApi";
 import { useNavigate, useLocation } from "react-router-dom";
+import { toast } from "react-toastify";
 
 const VerifyOTP = () => {
   const [otp, setOtp] = useState("");
@@ -12,10 +13,10 @@ const VerifyOTP = () => {
     e.preventDefault();
     try {
       await PublicAPI.post("verify-otp/", { email, otp });
-      alert("OTP Verified Successfully!");
+      toast.success("OTP Verified Successfully!");
       navigate("/user/reset-password", { state: { email } });
     } catch (err) {
-      alert(err.response?.data?.error || "OTP Verification Failed.");
+      toast.error(err.response?.data?.error || "OTP Verification Failed.");
     }
   };
 
@@ -25,20 +26,41 @@ const VerifyOTP = () => {
   }
 
   return (
-    <div className="p-6 max-w-sm mx-auto mt-12 bg-white rounded shadow">
-      <h2 className="text-2xl font-bold mb-4">Verify OTP</h2>
-      <form onSubmit={handleVerify}>
-        <input
-          type="text"
-          placeholder="Enter OTP"
-          className="w-full mb-3 p-2 border rounded"
-          value={otp}
-          onChange={(e) => setOtp(e.target.value)}
-          required
-        />
-        <button className="w-full p-2 bg-blue-600 text-white rounded">Verify OTP</button>
-      </form>
-    </div>
+    <section className="min-h-screen flex items-center justify-center bg-gray-50 px-4">
+      <div className="w-full max-w-md bg-white rounded-lg shadow-md p-6">
+        <h1 className="text-2xl font-bold text-center text-gray-800 mb-1">Verify OTP</h1>
+        <p className="text-sm text-center text-gray-500 mb-6">
+          We've sent an OTP to your email. Please enter it below.
+        </p>
+
+        <form className="space-y-4" onSubmit={handleVerify}>
+          <div>
+            <label
+              htmlFor="otp"
+              className="block mb-1 text-sm font-medium text-gray-700"
+            >
+              One-Time Password
+            </label>
+            <input
+              type="text"
+              id="otp"
+              required
+              value={otp}
+              onChange={(e) => setOtp(e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-teal-500"
+              placeholder="Enter OTP"
+            />
+          </div>
+
+          <button
+            type="submit"
+            className="w-full bg-teal-600 text-white py-2 rounded hover:bg-teal-700 transition"
+          >
+            Verify OTP
+          </button>
+        </form>
+      </div>
+    </section>
   );
 };
 

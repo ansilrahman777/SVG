@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from "react";
 import API from "../../api/axios";
 import { useNavigate } from "react-router-dom";
+import Header from "../../components/user/Header"; // Adjust the path if needed
+import { toast } from "react-toastify";
 
 const UserProfile = () => {
   const [profile, setProfile] = useState({
@@ -9,15 +11,18 @@ const UserProfile = () => {
     mobile: "",
     dob: "",
   });
-
+  const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
 
   const fetchProfile = async () => {
+    setLoading(true);
     try {
       const res = await API.get("accounts/profile/");
       setProfile(res.data);
-    } catch (err) {
-      alert("Failed to load profile.");
+    } catch {
+      toast.error("Failed to load profile.", { autoClose: 2000 });
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -31,67 +36,107 @@ const UserProfile = () => {
 
   const handleSave = async (e) => {
     e.preventDefault();
+    setLoading(true);
     try {
       await API.put("accounts/profile/", profile);
-      alert("Profile updated successfully!");
+      toast.success("Profile updated successfully!", { autoClose: 2000 });
       navigate("/user/dashboard");
-    } catch (err) {
-      alert("Failed to update profile.");
+    } catch {
+      toast.error("Failed to update profile.", { autoClose: 2000 });
+    } finally {
+      setLoading(false);
     }
   };
 
   return (
-    <div>
-      {/* Header */}
-      <header className="flex justify-between items-center bg-blue-600 p-4 text-white">
-        <h1 className="text-xl font-bold">Profile</h1>
-        <button
-          onClick={() => navigate("/user/dashboard")}
-          className="bg-white text-blue-600 px-3 py-1 rounded"
+    <div className="min-h-screen bg-gray-50 flex flex-col">
+      <Header />
+
+      <main className="flex-grow flex justify-center items-start p-6">
+        <form
+          onSubmit={handleSave}
+          className="bg-white rounded-md border-md shadow-md max-w-md w-full p-6
+            animate-fadeIn"
+          style={{ animationDuration: "400ms", animationTimingFunction: "ease-out" }}
         >
-          Back to Dashboard
-        </button>
-      </header>
+          <h2 className="text-xl font-semibold text-gray-800 mb-6 text-center">
+            Edit Profile
+          </h2>
 
-      {/* Profile Form */}
-      <form onSubmit={handleSave} className="p-6 max-w-md mx-auto mt-8 bg-white rounded shadow">
-        <h2 className="text-2xl font-bold mb-4">Edit Profile</h2>
+          <label className="block mb-4">
+            <span className="text-gray-700 text-sm mb-1 block">First Name</span>
+            <input
+              type="text"
+              name="first_name"
+              value={profile.first_name}
+              onChange={handleChange}
+              placeholder="First Name"
+              required
+              className="w-full border border-gray-300 rounded px-3 py-2
+                focus:outline-none focus:ring-1 focus:ring-blue-500"
+            />
+          </label>
 
-        <input
-          type="text"
-          name="first_name"
-          placeholder="First Name"
-          value={profile.first_name}
-          onChange={handleChange}
-          className="w-full mb-3 p-2 border rounded"
-        />
-        <input
-          type="text"
-          name="last_name"
-          placeholder="Last Name"
-          value={profile.last_name}
-          onChange={handleChange}
-          className="w-full mb-3 p-2 border rounded"
-        />
-        <input
-          type="text"
-          name="mobile"
-          placeholder="Mobile"
-          value={profile.mobile}
-          onChange={handleChange}
-          className="w-full mb-3 p-2 border rounded"
-        />
-        <input
-          type="date"
-          name="dob"
-          placeholder="Date of Birth"
-          value={profile.dob}
-          onChange={handleChange}
-          className="w-full mb-3 p-2 border rounded"
-        />
+          <label className="block mb-4">
+            <span className="text-gray-700 text-sm mb-1 block">Last Name</span>
+            <input
+              type="text"
+              name="last_name"
+              value={profile.last_name}
+              onChange={handleChange}
+              placeholder="Last Name"
+              required
+              className="w-full border border-gray-300 rounded px-3 py-2
+                focus:outline-none focus:ring-1 focus:ring-blue-500"
+            />
+          </label>
 
-        <button className="w-full p-2 bg-blue-600 text-white rounded">Save Changes</button>
-      </form>
+          <label className="block mb-4">
+            <span className="text-gray-700 text-sm mb-1 block">Mobile</span>
+            <input
+              type="tel"
+              name="mobile"
+              value={profile.mobile}
+              onChange={handleChange}
+              placeholder="Mobile"
+              className="w-full border border-gray-300 rounded px-3 py-2
+                focus:outline-none focus:ring-1 focus:ring-blue-500"
+            />
+          </label>
+
+          <label className="block mb-6">
+            <span className="text-gray-700 text-sm mb-1 block">Date of Birth</span>
+            <input
+              type="date"
+              name="dob"
+              value={profile.dob}
+              onChange={handleChange}
+              className="w-full border border-gray-300 rounded px-3 py-2
+                focus:outline-none focus:ring-1 focus:ring-blue-500"
+            />
+          </label>
+
+          <button
+            type="submit"
+            disabled={loading}
+            className={`w-full bg-blue-600 text-white py-2 rounded
+              font-semibold hover:bg-blue-700 transition
+              ${loading ? "opacity-70 cursor-not-allowed" : ""}`}
+          >
+            {loading ? "Saving..." : "Save Changes"}
+          </button>
+        </form>
+      </main>
+
+      <style>{`
+        @keyframes fadeIn {
+          from {opacity: 0;}
+          to {opacity: 1;}
+        }
+        .animate-fadeIn {
+          animation-name: fadeIn;
+        }
+      `}</style>
     </div>
   );
 };

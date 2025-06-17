@@ -1,6 +1,7 @@
 import React, { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import API from "../../api/axios";
+import { toast } from "react-toastify";
 
 const AdminLogin = () => {
   const [email, setEmail] = useState("");
@@ -15,31 +16,30 @@ const AdminLogin = () => {
     setLoading(true);
 
     try {
-      console.log({ email, password });
+      const res = await API.post("adminpanel/login/", { email, password });
 
-      const response = await API.post("adminpanel/login/", { email, password });
+      localStorage.setItem("access", res.data.access);
+      localStorage.setItem("refresh", res.data.refresh);
+      localStorage.setItem("user_email", res.data.user?.email || email);
 
-      localStorage.setItem("access", response.data.access);
-      localStorage.setItem("refresh", response.data.refresh);
-
+      toast.success("Admin Login Successful!", { autoClose: 2000 });
       navigate("/adminpanel/dashboard");
     } catch (err) {
-      if (err.response?.data) {
-        setError(err.response.data.detail || "Login failed");
-      } else {
-        setError("Network error. Please try again.");
-      }
+      setError(err.response?.data?.detail || "Login failed.");
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 via-blue-100 to-white px-4">
-      <div className="w-full max-w-md bg-white/90 backdrop-blur-md shadow-xl rounded-xl p-8 border border-gray-200 animate-fadeIn">
-        <h2 className="text-3xl font-extrabold text-center text-gray-800 mb-6">
-          Admin Login
-        </h2>
+    <section className="min-h-screen flex items-center justify-center bg-gray-50 px-4">
+      <div className="w-full max-w-md bg-white rounded-lg shadow-md p-6">
+        <h1 className="text-2xl font-bold text-center text-gray-800 mb-1">
+          ADMIN LOGIN
+        </h1>
+        <p className="text-sm text-center text-gray-500 mb-6">
+          Only authorized admins can access this panel
+        </p>
 
         {error && (
           <div className="bg-red-100 text-red-700 text-sm p-3 mb-4 rounded border border-red-300">
@@ -47,49 +47,64 @@ const AdminLogin = () => {
           </div>
         )}
 
-        <form onSubmit={handleSubmit} className="space-y-5">
+        <form className="space-y-4" onSubmit={handleSubmit}>
           <div>
-            <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
-              Email
+            <label
+              htmlFor="email"
+              className="block mb-1 text-sm font-medium text-gray-700"
+            >
+              Email Address
             </label>
             <input
-              id="email"
               type="email"
+              id="email"
+              name="email"
               required
               value={email}
               onChange={(e) => setEmail(e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-teal-500"
               placeholder="admin@example.com"
-              className="w-full px-4 py-2 rounded-md border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:outline-none transition"
             />
           </div>
 
           <div>
-            <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-1">
+            <label
+              htmlFor="password"
+              className="block mb-1 text-sm font-medium text-gray-700"
+            >
               Password
             </label>
             <input
-              id="password"
               type="password"
+              id="password"
+              name="password"
               required
               value={password}
               onChange={(e) => setPassword(e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-teal-500"
               placeholder="••••••••"
-              className="w-full px-4 py-2 rounded-md border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:outline-none transition"
             />
           </div>
 
           <button
             type="submit"
             disabled={loading}
-            className={`w-full py-2 rounded-md text-white font-semibold bg-blue-600 hover:bg-blue-700 transition ${
+            className={`w-full bg-teal-600 text-white py-2 rounded hover:bg-teal-700 transition ${
               loading ? "opacity-70 cursor-not-allowed" : ""
             }`}
           >
-            {loading ? "Logging in..." : "Login"}
+            {loading ? "Logging in..." : "Sign In"}
           </button>
         </form>
+
+        <p className="mt-4 text-center text-sm text-gray-600">
+          Not an Admin?{" "}
+          <Link to="/user/login" className="text-teal-600 font-medium hover:underline">
+            Go to User Login
+          </Link>
+        </p>
       </div>
-    </div>
+    </section>
   );
 };
 

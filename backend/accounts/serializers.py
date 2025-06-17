@@ -37,10 +37,15 @@ class UserProfileSerializer(serializers.ModelSerializer):
         
 
 class CommentSerializer(serializers.ModelSerializer):
+    user_email = serializers.SerializerMethodField()
+
     class Meta:
         model = Comment
-        fields = ['id', 'text', 'user', 'page', 'created_at', 'updated_at']
-        read_only_fields = ['id', 'user', 'page', 'created_at', 'updated_at']
+        fields = ['id', 'text', 'user', 'user_email', 'page', 'created_at', 'updated_at']
+        read_only_fields = ['id', 'user', 'user_email', 'page', 'created_at', 'updated_at']
+
+    def get_user_email(self, obj):
+        return obj.user.email if obj.user else None
 
     def validate_text(self, value):
         if not value.strip():

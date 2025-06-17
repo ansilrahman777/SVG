@@ -89,3 +89,7 @@ class CommentHistorySerializer(serializers.ModelSerializer):
 
     def get_comment_id(self, obj):
         return obj.comment.id if obj.comment else None
+
+class CountSerializer(serializers.Serializer):
+    total_users = serializers.IntegerField()
+    total_comments = serializers.IntegerField()

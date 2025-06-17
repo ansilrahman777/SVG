@@ -5,7 +5,7 @@ from django.contrib.auth import authenticate
 from rest_framework_simplejwt.tokens import RefreshToken
 
 from .serializers import AdminLoginSerializer, AssignPermissionsSerializer, UserCreateSerializer
-from .serializers import UserPermissionsListSerializer,  CommentSerializer, CommentHistorySerializer
+from .serializers import UserPermissionsListSerializer,  CommentSerializer, CommentHistorySerializer, CountSerializer
 
 from accounts.models import User
 from .models import UserPermission, PAGE_CHOICES,Comment, CommentHistory
@@ -63,7 +63,7 @@ class ListUsersPermissionsView(APIView):
     permission_classes = [IsSuperAdmin]
 
     def get(self, request):
-        users = User.objects.filter(is_superadmin=False).prefetch_related('permissions')
+        users = User.objects.filter(is_superadmin=False).prefetch_related('permissions').order_by('-created_at')
         serializer = UserPermissionsListSerializer(users, many=True)
         return Response(serializer.data)
 
@@ -182,7 +182,7 @@ class AdminCommentDetailView(APIView):
             modified_by=request.user,
             action='deleted',
             old_text=comment.text,
-            new_text='',
+            new_text='[Deleted by Admin]',
             details=f"Deleted comment: '{comment.text}'"
         )
 
@@ -204,7 +204,7 @@ class AdminCommentListGroupedByPageView(APIView):
 
 
 class AdminAllCommentHistoriesView(APIView):
-    # permission_classes = [IsSuperAdmin]
+    permission_classes = [IsSuperAdmin]
 
     def get(self, request):
         histories = CommentHistory.objects.all().order_by('-modified_at')
@@ -212,3 +212,19 @@ class AdminAllCommentHistoriesView(APIView):
         return Response(serializer.data)
 
 
+class DashboardCountsAPIView(APIView):
+    permission_classes = [IsSuperAdmin]
+
+    def get(self, request):
+        # Count users excluding super admins
+        total_users = User.objects.filter(is_superadmin=False).count()
+        
+        # Count all comments
+        total_comments = Comment.objects.count()
+
+        data = {
+            "total_users": total_users,
+            "total_comments": total_comments,
+        }
+        serializer = CountSerializer(data)
+        return Response(serializer.data)
