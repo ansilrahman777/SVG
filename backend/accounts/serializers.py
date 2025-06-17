@@ -2,6 +2,7 @@ from rest_framework import serializers
 from django.contrib.auth import authenticate
 from .models import User, PasswordResetOTP
 from django.utils.crypto import get_random_string
+from adminpanel.models import Comment
 
 class UserLoginSerializer(serializers.Serializer):
     email = serializers.EmailField()
@@ -33,3 +34,18 @@ class UserProfileSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
         fields = ['first_name', 'last_name', 'mobile', 'dob']
+        
+
+class CommentSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Comment
+        fields = ['id', 'text', 'user', 'page', 'created_at', 'updated_at']
+        read_only_fields = ['id', 'user', 'page', 'created_at', 'updated_at']
+
+    def validate_text(self, value):
+        if not value.strip():
+            raise serializers.ValidationError("Comment text cannot be empty.")
+        return value
+
+    def create(self, validated_data):
+        return Comment.objects.create(**validated_data)

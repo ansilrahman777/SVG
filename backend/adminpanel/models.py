@@ -45,12 +45,25 @@ class Comment(models.Model):
 
 
 class CommentHistory(models.Model):
-    comment = models.ForeignKey(Comment, on_delete=models.SET_NULL, null=True, blank=True, related_name="histories")
-    modified_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True)
-    old_text = models.TextField()
-    new_text = models.TextField()
+    ACTION_CHOICES = [
+        ('added', 'Added'),
+        ('edited', 'Edited'),
+        ('deleted', 'Deleted'),
+    ]
+
+    comment = models.ForeignKey(
+        Comment, on_delete=models.SET_NULL, null=True, blank=True, related_name="histories"
+    )
+    modified_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True
+    )
+    action = models.CharField(max_length=10, choices=ACTION_CHOICES)
+    old_text = models.TextField(blank=True, null=True)
+    new_text = models.TextField(blank=True, null=True)
     modified_at = models.DateTimeField(auto_now_add=True)
+    details = models.TextField(blank=True, null=True)
 
     def __str__(self):
-        return f"History for Comment {self.comment.id if self.comment else 'Deleted'} by {self.modified_by.email if self.modified_by else 'Unknown'}"
-
+        comment_id = self.comment.id if self.comment else "Deleted"
+        user_email = self.modified_by.email if self.modified_by else "Unknown"
+        return f"{self.get_action_display()} by {user_email} on Comment {comment_id}"

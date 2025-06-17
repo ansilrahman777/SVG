@@ -4,17 +4,20 @@ from rest_framework import status, permissions
 from django.contrib.auth import authenticate
 from rest_framework_simplejwt.tokens import RefreshToken
 
-from .serializers import AdminLoginSerializer, UserCreateSerializer
-from .serializers import UserPermissionsListSerializer, AssignPermissionSerializer, CommentSerializer, CommentHistorySerializer
+from .serializers import AdminLoginSerializer, AssignPermissionsSerializer, UserCreateSerializer
+from .serializers import UserPermissionsListSerializer,  CommentSerializer, CommentHistorySerializer
 
 from accounts.models import User
 from .models import UserPermission, PAGE_CHOICES,Comment, CommentHistory
 from .permissions import IsSuperAdmin 
+from django.db import transaction
+
 
 from django.contrib.auth import get_user_model
 User = get_user_model()
 
 class AdminLoginView(APIView):
+    
     def post(self, request):
         serializer = AdminLoginSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
@@ -64,55 +67,38 @@ class ListUsersPermissionsView(APIView):
         serializer = UserPermissionsListSerializer(users, many=True)
         return Response(serializer.data)
 
-class AssignOrUpdatePermissionView(APIView):
+class AssignOrUpdatePermissionsView(APIView):
+    
     permission_classes = [IsSuperAdmin]
 
+    @transaction.atomic
     def post(self, request):
-        serializer = AssignPermissionSerializer(data=request.data)
+        serializer = AssignPermissionsSerializer(data=request.data)
         if serializer.is_valid():
             user_id = serializer.validated_data['user_id']
-            page = serializer.validated_data['page']
-
+            permissions_data = serializer.validated_data['permissions']
             user = User.objects.get(id=user_id)
 
-            perm, created = UserPermission.objects.get_or_create(
-                user=user,
-                page=page
-            )
-
-            # Check if any permission flags provided, else raise error
-            permission_fields = ['can_view', 'can_create', 'can_edit', 'can_delete']
-            if not any(field in request.data for field in permission_fields):
-                return Response(
-                    {"detail": "At least one permission field must be provided."},
-                    status=status.HTTP_400_BAD_REQUEST
+            for perm_data in permissions_data:
+                page = perm_data['page']
+                perm_obj, created = UserPermission.objects.get_or_create(
+                    user=user,
+                    page=page
                 )
 
-            # Update only the fields provided in request.data
-            for field in permission_fields:
-                if field in request.data:
-                    setattr(perm, field, request.data[field])
+                # Update only the permission fields provided in the request
+                for field in ['can_view', 'can_create', 'can_edit', 'can_delete']:
+                    if field in perm_data:
+                        setattr(perm_obj, field, perm_data[field])
 
-            # If all permissions are False after update — delete the permission record
-            if not any([perm.can_view, perm.can_create, perm.can_edit, perm.can_delete]):
-                perm.delete()
-                return Response(
-                    {"detail": "Permissions removed for this page."},
-                    status=status.HTTP_204_NO_CONTENT
-                )
+                # If all permissions are now False — delete permission record
+                if not (perm_obj.can_view or perm_obj.can_create or perm_obj.can_edit or perm_obj.can_delete):
+                    perm_obj.delete()
+                    continue
 
-            perm.save()
+                perm_obj.save()
 
-            return Response({
-                "detail": "Permissions assigned/updated successfully.",
-                "permissions": {
-                    "page": perm.page,
-                    "can_view": perm.can_view,
-                    "can_create": perm.can_create,
-                    "can_edit": perm.can_edit,
-                    "can_delete": perm.can_delete,
-                }
-            })
+            return Response({"detail": "Permissions assigned/updated successfully."})
 
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
@@ -128,7 +114,18 @@ class AdminCommentListCreateView(APIView):
     def post(self, request):
         serializer = CommentSerializer(data=request.data)
         if serializer.is_valid():
-            serializer.save(user=request.user)
+            comment = serializer.save(user=request.user)
+
+            # Create history record for added comment
+            CommentHistory.objects.create(
+                comment=comment,
+                modified_by=request.user,
+                action='added',
+                old_text='',
+                new_text=comment.text,
+                details=f"Added comment: '{comment.text}'"
+            )
+
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
@@ -141,7 +138,7 @@ class AdminCommentDetailView(APIView):
             return Comment.objects.get(pk=pk)
         except Comment.DoesNotExist:
             return None
-        
+
     def get(self, request, pk):
         comment = self.get_object(pk)
         if not comment:
@@ -150,23 +147,25 @@ class AdminCommentDetailView(APIView):
         serializer = CommentSerializer(comment)
         return Response(serializer.data)
 
-    def put(self, request, pk):
+    def patch(self, request, pk):
         comment = self.get_object(pk)
         if not comment:
             return Response({"detail": "Comment not found."}, status=status.HTTP_404_NOT_FOUND)
 
         old_text = comment.text
-        serializer = CommentSerializer(comment, data=request.data)
+        serializer = CommentSerializer(comment, data=request.data, partial=True)
         if serializer.is_valid():
             serializer.save()
 
-            # Save comment edit history
-            if old_text != request.data.get('text'):
+            new_text = request.data.get('text')
+            if new_text is not None and old_text != new_text:
                 CommentHistory.objects.create(
                     comment=comment,
                     modified_by=request.user,
+                    action='edited',
                     old_text=old_text,
-                    new_text=request.data['text']
+                    new_text=new_text,
+                    details=f"Edited comment from '{old_text}' to '{new_text}'"
                 )
 
             return Response(serializer.data)
@@ -178,18 +177,18 @@ class AdminCommentDetailView(APIView):
         if not comment:
             return Response({"detail": "Comment not found."}, status=status.HTTP_404_NOT_FOUND)
 
-        # Save comment delete history before actual delete
         CommentHistory.objects.create(
             comment=comment,
             modified_by=request.user,
+            action='deleted',
             old_text=comment.text,
-            new_text="Comment deleted.",
+            new_text='',
+            details=f"Deleted comment: '{comment.text}'"
         )
 
         comment.delete()
 
         return Response({"detail": "Comment deleted successfully."}, status=status.HTTP_200_OK)
-
 
 
 class AdminCommentListGroupedByPageView(APIView):
@@ -204,13 +203,12 @@ class AdminCommentListGroupedByPageView(APIView):
         return Response(result)
 
 
-class AdminCommentHistoryView(APIView):
-    permission_classes = [IsSuperAdmin]
+class AdminAllCommentHistoriesView(APIView):
+    # permission_classes = [IsSuperAdmin]
 
-    def get(self, request, comment_id):
-        histories = CommentHistory.objects.filter(comment_id=comment_id).order_by('-modified_at')
-        if not histories.exists():
-            return Response({"detail": "No modification history found for this comment."}, status=status.HTTP_404_NOT_FOUND)
+    def get(self, request):
+        histories = CommentHistory.objects.all().order_by('-modified_at')
         serializer = CommentHistorySerializer(histories, many=True)
-        return Response(serializer.data)  
+        return Response(serializer.data)
+
 

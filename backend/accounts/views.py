@@ -11,10 +11,9 @@ from .serializers import (
     PasswordResetRequestSerializer,
     PasswordResetVerifyOTPSerializer,
     PasswordResetConfirmSerializer,
-    UserProfileSerializer
+    UserProfileSerializer, CommentSerializer
 )
 from adminpanel.models import UserPermission, Comment, CommentHistory, PAGE_CHOICES
-from adminpanel.serializers import CommentSerializer, CommentHistorySerializer
 from django.shortcuts import get_object_or_404
 User = get_user_model()
 
@@ -31,6 +30,9 @@ class UserLoginView(APIView):
             return Response({
                 'access': str(refresh.access_token),
                 'refresh': str(refresh),
+                'user': {
+                    'email': user.email,
+                }
             })
         return Response({'error': 'Invalid credentials or not a regular user.'}, status=401)
 
@@ -144,7 +146,8 @@ class UserPagePermissionsView(APIView):
         permissions_qs = UserPermission.objects.filter(user=request.user)
         data = [
             {
-                "page": p.get_page_display(),
+                "page_key": p.page,                         # 'products_list'
+                "page_label": p.get_page_display(),         # 'Products List'
                 "can_view": p.can_view,
                 "can_create": p.can_create,
                 "can_edit": p.can_edit,
@@ -153,6 +156,7 @@ class UserPagePermissionsView(APIView):
             for p in permissions_qs
         ]
         return Response(data, status=status.HTTP_200_OK)
+
 
 
 # 📌 API: List and create comments for a page
@@ -202,19 +206,17 @@ class UserCommentDetailView(APIView):
 
     def put(self, request, pk):
         comment = self.get_object(pk)
-        if comment.user != request.user:
-            return Response({"detail": "Cannot edit others' comments."}, status=status.HTTP_403_FORBIDDEN)
 
         permission = get_user_permission(request.user, comment.page)
         if not permission or not permission.can_edit:
             return Response({"detail": "No edit permission on this page."}, status=status.HTTP_403_FORBIDDEN)
 
         old_text = comment.text
-        serializer = CommentSerializer(comment, data=request.data)
+        serializer = CommentSerializer(comment, data=request.data, partial=True, context={'request': request})
         if serializer.is_valid():
             serializer.save()
 
-            if old_text != request.data.get('text'):
+            if 'text' in request.data and old_text != request.data['text']:
                 CommentHistory.objects.create(
                     comment=comment,
                     modified_by=request.user,
@@ -228,9 +230,7 @@ class UserCommentDetailView(APIView):
 
     def delete(self, request, pk):
         comment = self.get_object(pk)
-        if comment.user != request.user:
-            return Response({"detail": "Cannot delete others' comments."}, status=status.HTTP_403_FORBIDDEN)
-
+        
         permission = get_user_permission(request.user, comment.page)
         if not permission or not permission.can_delete:
             return Response({"detail": "No delete permission on this page."}, status=status.HTTP_403_FORBIDDEN)

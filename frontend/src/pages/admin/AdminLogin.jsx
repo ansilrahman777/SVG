@@ -15,12 +15,14 @@ const AdminLogin = () => {
     setLoading(true);
 
     try {
+      console.log({ email, password });
+
       const response = await API.post("adminpanel/login/", { email, password });
 
       localStorage.setItem("access", response.data.access);
       localStorage.setItem("refresh", response.data.refresh);
 
-      navigate("/admin/dashboard");
+      navigate("/adminpanel/dashboard");
     } catch (err) {
       if (err.response?.data) {
         setError(err.response.data.detail || "Login failed");
