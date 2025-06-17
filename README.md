@@ -1,7 +1,43 @@
-# 📊 Super Admin Dashboard with User Access Control
+## 📊 Super Admin Dashboard with User Access Control
 
 A full-stack web application using **React** and **Django REST Framework** that provides a Super Admin Dashboard for managing users, page-based permissions, and comment histories.
 
+
+## 📂 Project Structure
+
+SuperAdminDashboard/
+-├── backend/ # Django Backend
+-├── frontend/ # React Frontend
+-├── requirements.txt
+-└── .gitignore
+
+
+
+## ⚙️ Setup Instructions
+
+### 📥 Clone the Repository
+```bash
+git clone https://github.com/ansilrahman777/SuperAdminDashboard.git
+cd SuperAdminDashboard
+
+#Backend Setup (Django)
+
+cd backend
+python -m venv venv
+source venv/bin/activate   # On Windows: venv\Scripts\activate
+pip install -r requirements.txt
+python manage.py makemigrations
+python manage.py migrate
+python manage.py createsuperuser
+python manage.py runserver
+
+#Frontend Setup (React)
+
+cd frontend
+npm install
+npm run dev
+
+```
 ---
 
 ## 📌 Overview
@@ -12,7 +48,7 @@ This project allows a **Super Admin** to:
 - Track comment modification history.
 - Regular users can access only their assigned pages and actions.
 
----
+
 
 ## ✨ Key Features
 
@@ -46,41 +82,11 @@ This project allows a **Super Admin** to:
 - Comments visible to users with view access
 - Super Admin can view comment modification history (with tooltip showing who modified and when)
 
----
-
-## 📂 Project Structure
-
-SuperAdminDashboard/
-├── backend/ # Django Backend
-├── frontend/ # React Frontend
-├── requirements.txt
-└── .gitignore
 
 
----
-
-## ⚙️ Setup Instructions
-
-### 📥 Clone the Repository
-```bash
-git clone https://github.com/ansilrahman777/SuperAdminDashboard.git
-cd SuperAdminDashboard
-
-#Backend Setup (Django)
-
-cd backend
-python -m venv venv
-source venv/bin/activate   # On Windows: venv\Scripts\activate
-pip install -r requirements.txt
-python manage.py makemigrations
-python manage.py migrate
-python manage.py createsuperuser
-python manage.py runserver
-
-#Frontend Setup (React)
-
-cd frontend
-npm install
-npm run dev
+Project Demonstration & Code Walkthrough:
+▶️ [Watch the full project demo here](https://drive.google.com/file/d/1LCg31mbYZPi8zUrIsvj5kSp6HsUlgE4g/view?usp=sharing)
 
 
+## 📌 Conclusion
+This project delivers a clean, reliable, and scalable Super Admin Dashboard system with robust access control and content management features — built for enterprise-ready user role management.
