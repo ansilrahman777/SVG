@@ -66,6 +66,7 @@ SuperAdminDashboard/
 git clone https://github.com/ansilrahman777/SuperAdminDashboard.git
 cd SuperAdminDashboard
 
+#Backend Setup (Django)
 
 cd backend
 python -m venv venv
@@ -75,6 +76,8 @@ python manage.py makemigrations
 python manage.py migrate
 python manage.py createsuperuser
 python manage.py runserver
+
+#Frontend Setup (React)
 
 cd frontend
 npm install
