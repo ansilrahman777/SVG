@@ -38,7 +38,7 @@ const PageCard = ({ pageLabel, count, color, onClick }) => {
       </div>
 
       <div className="relative text-white px-6 pb-6">
-        <p className="text-sm opacity-75 mb-2 text-center">Total Comments</p>
+        {/* <p className="text-sm opacity-75 mb-2 text-center">Total Comments</p> */}
         <div className="flex justify-center">
           <span className="bg-white text-gray-800 rounded-full text-sm font-semibold px-4 py-1">
             {count}
